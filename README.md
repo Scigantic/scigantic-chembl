@@ -1,6 +1,17 @@
-# scigantic-chembl
+<h1 align="center">scigantic-chembl</h1>
 
-Query ChEMBL directly from a public S3 mirror with DuckDB. No download, no local database to manage.
+<p align="center">
+    <a href="https://github.com/Scigantic/scigantic-chembl/actions/workflows/ci.yml">
+        <img alt="CI" src="https://github.com/Scigantic/scigantic-chembl/actions/workflows/ci.yml/badge.svg" /></a>
+    <a href="https://pypi.org/project/scigantic-chembl/">
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/scigantic-chembl" /></a>
+    <a href="https://pypi.org/project/scigantic-chembl/">
+        <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/scigantic-chembl" /></a>
+    <a href="https://github.com/Scigantic/scigantic-chembl/blob/main/LICENSE">
+        <img alt="License" src="https://img.shields.io/github/license/Scigantic/scigantic-chembl" /></a>
+</p>
+
+Query ChEMBL directly from a public S3 mirror with DuckDB.
 
 ```python
 import scigantic_chembl as chembl
@@ -13,27 +24,33 @@ df = chembl.query("""
 """)
 ```
 
-That query runs against `s3://scigantic-chembl`, a public mirror of ChEMBL converted to parquet. Nothing is downloaded first.
+That query runs against `s3://scigantic-chembl` over DuckDB's httpfs extension. Nothing is downloaded first, and there's no local database file sitting on disk afterward.
+
+## Installation
+
+```console
+$ pip install scigantic-chembl
+```
 
 ## Compared to chembl-downloader
 
-[chembl-downloader](https://github.com/cthoyt/chembl-downloader) is the standard way to work with ChEMBL in Python, and it covers every release back to chembl_1, with full offline access once the SQLite dump is downloaded. This package trades that for less setup and two things chembl-downloader doesn't ship on its own: a pre-joined potency table, and similarity search with no separate index build. The trade is release coverage: this mirror carries chembl_35 through chembl_37, and only chembl_37 has the pre-joined and similarity layers. If you need an older release or fully offline access, chembl-downloader is the right tool.
+[chembl-downloader](https://github.com/cthoyt/chembl-downloader) is the standard way to work with ChEMBL in Python. It covers every release back to chembl_1, and once the SQLite dump is downloaded it works fully offline. This package gives up that range for less setup and two things chembl-downloader doesn't ship on its own: a pre-joined potency table, and similarity search with no separate index build. The mirror here only carries chembl_35 through chembl_37, and only chembl_37 has the pre-joined and similarity layers, so an older release or fully offline work is still a job for chembl-downloader.
 
 ## Potency data, pre-joined
 
-`activities` needs a five-table join and a few correctness filters before it is usable for structure-activity work. That join is already done and stored as `derived/activities_enriched.parquet`:
+`activities` needs a five-table join and a few correctness filters before it's usable for structure-activity work. That join is already done, stored as `derived/activities_enriched.parquet`:
 
 ```python
 df = chembl.activities(target_chembl_id="CHEMBL203")  # EGFR: 18,998 rows, 11,202 compounds
 ```
 
-The filters already applied are the ones that are about correctness rather than taste: `pchembl_value` present, `standard_relation = '='`, no `data_validity_comment`, not a `potential_duplicate`. `confidence_score` and `target_type` are left as columns, not filters, since which rows count as usable SAR data is an analysis choice:
+The filters already applied are about correctness, not taste: `pchembl_value` present, `standard_relation = '='`, no `data_validity_comment`, not a `potential_duplicate`. `confidence_score` and `target_type` stay as columns rather than filters, since which rows count as usable SAR data is an analysis choice:
 
 ```python
 df = chembl.activities(target_chembl_id="CHEMBL203", min_confidence=8)
 ```
 
-Direct SQL against the raw tables still works with `chembl.query()`.
+`chembl.query()` still reaches the raw tables directly for anything the join leaves out.
 
 ## Similarity search
 
@@ -51,9 +68,9 @@ CHEMBL4165375  0.916667
 CHEMBL4448162  0.857143
 ```
 
-Every compound with a comparable potency measurement (1.68M of ChEMBL's 2.9M structures) has a precomputed 2048-bit Morgan fingerprint. `similar_compounds` loads them once per process and ranks by Tanimoto similarity with plain numpy. Loading the corpus is the only slow part: about 18 seconds on a typical home connection, faster from inside AWS, and every call after the first in the same process is under half a second. chembl-downloader can do similarity search too, through `chemfp`, but its own docs put building that index at tens of minutes.
+CHEMBL939 is gefitinib itself. Every compound with a comparable potency measurement (1.68M of ChEMBL's 2.9M structures) has a precomputed 2048-bit Morgan fingerprint, kept packed in memory and compared with numpy's `bitwise_count` rather than unpacked bit by bit. The corpus loads once per process, about 18 seconds on a typical home connection and faster from inside AWS; every call after that in the same process is under half a second. chembl-downloader can do similarity search too, through `chemfp`, but its own docs put building that index at tens of minutes.
 
-This needs rdkit, kept as an optional extra:
+Similarity search needs rdkit to encode the query molecule, so it's kept as an optional extra:
 
 ```console
 $ pip install "scigantic-chembl[similarity]"
@@ -71,13 +88,7 @@ chembl.releases()
 | chembl_36 | yes | no | no | yes |
 | chembl_35 | yes | no | no | yes |
 
-chembl_36 and chembl_35 are raw-table access only. Their `activities` table is missing a column chembl_37's has (`modality`), so calling `activities()` or `similar_compounds()` on them raises `ReleaseCapabilityError` up front instead of failing partway through a join with a confusing error.
-
-## Installation
-
-```console
-$ pip install scigantic-chembl
-```
+chembl_36 and chembl_35 are raw-table access only: their `activities` table is missing a column chembl_37's has (`modality`), so calling `activities()` or `similar_compounds()` on either one raises `ReleaseCapabilityError` up front instead of failing partway through a join with a confusing error.
 
 ## Command line
 
@@ -88,4 +99,4 @@ $ scigantic-chembl query "SELECT count(*) FROM activities" --release chembl_37
 
 ## License
 
-MIT-0. See LICENSE.
+MIT-0. See [LICENSE](LICENSE).
