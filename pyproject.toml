@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scigantic-chembl"
-version = "0.1.0"
-description = "Query ChEMBL directly from a public S3 mirror with DuckDB. No download, no local database."
+version = "0.1.1"
+description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table and fingerprint similarity search."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT-0" }
@@ -33,12 +33,17 @@ dev = ["pytest>=7"]
 
 [project.urls]
 Homepage = "https://scigantic.com"
+Repository = "https://github.com/Scigantic/scigantic-chembl"
+Issues = "https://github.com/Scigantic/scigantic-chembl/issues"
 
 [project.scripts]
 scigantic-chembl = "scigantic_chembl.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+scigantic_chembl = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
