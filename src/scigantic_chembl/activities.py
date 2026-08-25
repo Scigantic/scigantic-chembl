@@ -46,7 +46,8 @@ def activities(
             "CREATE OR REPLACE VIEW activities_enriched AS "
             f"SELECT * FROM read_parquet('{path}')"
         )
-        where, params = [], []
+        where: list[str] = []
+        params: list[str | int] = []
         if target_chembl_id is not None:
             where.append("target_chembl_id = ?")
             params.append(target_chembl_id)

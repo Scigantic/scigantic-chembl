@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Sequence
+from typing import Sequence, cast
 
 from .connection import query as run_query
 from .releases import releases
@@ -49,7 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     query_parser.set_defaults(func=_cmd_query)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    return cast(int, args.func(args))
 
 
 if __name__ == "__main__":

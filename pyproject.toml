@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scigantic-chembl"
-version = "0.2.0"
+version = "0.2.1"
 description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table and fingerprint similarity search."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,6 +14,12 @@ keywords = ["chembl", "cheminformatics", "duckdb", "drug-discovery", "bioactivit
 classifiers = [
   "License :: OSI Approved :: MIT No Attribution License (MIT-0)",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Scientific/Engineering :: Chemistry",
 ]
@@ -29,7 +35,7 @@ dependencies = [
 # rdkit is only needed to encode the query molecule in similar_compounds();
 # everything else works without it.
 similarity = ["rdkit>=2023.9"]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "mypy>=1.10", "pandas-stubs"]
 
 [project.urls]
 Homepage = "https://scigantic.com"
@@ -47,3 +53,17 @@ scigantic_chembl = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+# No python_version pin: numpy's own .pyi stubs use syntax (PEP 695 `type`
+# statements) that needs a modern parser regardless of our own 3.10 floor,
+# so this checks with whatever interpreter runs mypy rather than forcing an
+# older grammar that chokes on a dependency's stub files.
+strict = true
+
+# pyarrow ships without a py.typed marker on this version; nothing to fix on
+# our side, so this is scoped to that one module rather than a blanket
+# ignore_missing_imports that would also hide a real gap elsewhere.
+[[tool.mypy.overrides]]
+module = "pyarrow.*"
+ignore_missing_imports = true

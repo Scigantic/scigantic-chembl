@@ -18,6 +18,7 @@ import urllib.error
 import urllib.request
 import warnings
 from dataclasses import dataclass
+from typing import Any, cast
 
 from ._constants import BUCKET, REGION
 
@@ -66,10 +67,10 @@ class ReleaseInfo:
     cyp_training: bool
 
 
-_cache: dict | None = None
+_cache: dict[str, Any] | None = None
 
 
-def _manifest() -> dict:
+def _manifest() -> dict[str, Any]:
     global _cache
     if _cache is not None:
         return _cache
@@ -99,7 +100,7 @@ def releases() -> list[ReleaseInfo]:
 
 def latest() -> str:
     """The release the archive treats as its current default."""
-    return _manifest()["latest"]
+    return cast(str, _manifest()["latest"])
 
 
 def _validate_release(release: str) -> None:
