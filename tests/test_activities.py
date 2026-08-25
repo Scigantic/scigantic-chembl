@@ -16,8 +16,25 @@ def test_activities_sorted_by_potency_descending():
     assert df["pchembl_value"].is_monotonic_decreasing
 
 
-def test_min_confidence_filter_narrows_results():
+def test_min_confidence_is_a_no_op_within_one_target():
+    # Verified, not assumed: ChEMBL curates confidence_score per target
+    # entry, not per measurement, so every row sharing a target_chembl_id
+    # shares the same confidence class. Checked across the whole corpus:
+    # zero targets have a mixed confidence_score. So this combination is
+    # redundant by design, not a filter that silently does nothing wrong.
     unfiltered = chembl.activities(target_chembl_id="CHEMBL203")
     filtered = chembl.activities(target_chembl_id="CHEMBL203", min_confidence=8)
-    assert len(filtered) <= len(unfiltered)
+    assert len(filtered) == len(unfiltered)
+
+
+def test_min_confidence_narrows_results_across_the_corpus():
+    # Where min_confidence actually does something: without a
+    # target_chembl_id restriction, different targets carry different
+    # confidence classes. Both queries are capped at the same limit and the
+    # corpus is large enough to fill it either way, so this checks
+    # composition, not row count: real heterogeneity without the filter,
+    # none left with it.
+    unfiltered = chembl.activities(limit=50_000)
+    filtered = chembl.activities(min_confidence=8, limit=50_000)
+    assert (unfiltered["confidence_score"] < 8).any()
     assert (filtered["confidence_score"] >= 8).all()

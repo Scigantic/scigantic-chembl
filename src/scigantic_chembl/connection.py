@@ -47,6 +47,12 @@ def connect(release: str | None = None) -> "duckdb.DuckDBPyConnection":
     _validate_release(release)
 
     con = duckdb.connect()
+    # DuckDB auto-shows an ASCII progress bar for queries it estimates will
+    # take a while, on stdout, regardless of whether that's a real
+    # terminal. Fine for the ops scripts in the main scigantic repo that
+    # already set this; surprising output for a library call in a notebook
+    # or script, so it's off here by default.
+    con.execute("SET enable_progress_bar=false")
     con.execute("INSTALL httpfs")
     con.execute("LOAD httpfs")
     con.execute(f"SET s3_region='{REGION}'")

@@ -47,8 +47,10 @@ df = chembl.activities(target_chembl_id="CHEMBL203")  # EGFR: 18,998 rows, 11,20
 The filters already applied are about correctness, not taste: `pchembl_value` present, `standard_relation = '='`, no `data_validity_comment`, not a `potential_duplicate`. `confidence_score` and `target_type` stay as columns rather than filters, since which rows count as usable SAR data is an analysis choice:
 
 ```python
-df = chembl.activities(target_chembl_id="CHEMBL203", min_confidence=8)
+df = chembl.activities(min_confidence=8, limit=50_000)
 ```
+
+`min_confidence` won't do anything combined with a single `target_chembl_id`: ChEMBL curates `confidence_score` per target entry, not per measurement, so every row for one target shares the same confidence class (verified against the live corpus: zero targets have a mixed score). It narrows results when querying across targets, like the example above.
 
 `chembl.query()` still reaches the raw tables directly for anything the join leaves out.
 
