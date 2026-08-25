@@ -1,3 +1,7 @@
+from unittest import mock
+
+import pytest
+
 import scigantic_chembl as chembl
 from scigantic_chembl.cache import resolve
 
@@ -41,6 +45,44 @@ def test_disable_cache_reverts_to_s3(tmp_path):
     chembl.disable_cache()
     assert chembl.is_cache_enabled() is False
     assert resolve(_SMALL_KEY) == f"s3://scigantic-chembl/{_SMALL_KEY}"
+
+
+def test_interrupted_download_leaves_no_corrupt_final_file(tmp_path):
+    # A killed download must never leave something at the real path that
+    # looks cached but isn't. Simulates a network drop partway through a
+    # read, then confirms a real, unmocked retry recovers cleanly.
+    class DroppedConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+        def read(self, _n):
+            if getattr(self, "_served", False):
+                raise ConnectionError("simulated network drop mid-download")
+            self._served = True
+            return b"partial-bytes"
+
+    chembl.enable_cache(cache_dir=str(tmp_path))
+    try:
+        with mock.patch("urllib.request.urlopen", return_value=DroppedConnection()):
+            with pytest.raises(ConnectionError):
+                resolve(_SMALL_KEY)
+
+        final = tmp_path / _SMALL_KEY
+        part = tmp_path / (_SMALL_KEY + ".part")
+        assert not final.exists()
+        assert part.exists()  # harmless debris, not corruption
+
+        # Real retry, no mocking: must succeed and clean up the leftover.
+        recovered = resolve(_SMALL_KEY)
+        assert final.exists()
+        assert final.stat().st_size > 0
+        assert not part.exists()
+        assert recovered == str(final)
+    finally:
+        chembl.disable_cache()
 
 
 def test_cached_activities_match_uncached(tmp_path):
