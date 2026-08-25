@@ -1,5 +1,12 @@
-"""DuckDB connection helpers. No download: queries run against the public
-S3 mirror over httpfs.
+"""DuckDB connection helpers. Queries run against the public S3 mirror over
+httpfs, no download.
+
+This module deliberately does not participate in enable_cache() (see
+cache.py): connect() registers all ten core tables as views on every call,
+several over 1 GB, so caching them here would mean any call to connect()
+or query() eagerly downloads everything regardless of what the query
+actually touches. Caching applies to activities()/similar_compounds()/
+substructure_search() instead, each of which needs exactly one known file.
 """
 
 from __future__ import annotations

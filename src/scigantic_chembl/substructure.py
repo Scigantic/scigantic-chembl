@@ -19,7 +19,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ._constants import BUCKET
+from ._constants import BUCKET, REGION
+from .cache import is_cache_enabled as _cache_enabled
+from .cache import resolve as _resolve
 from .connection import connect
 from .releases import _require, latest
 
@@ -47,12 +49,16 @@ def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
     if release in _corpus_cache:
         return _corpus_cache[release]
 
-    import pyarrow.fs as pafs
     import pyarrow.parquet as pq
 
-    filesystem = pafs.S3FileSystem(region="us-east-1", anonymous=True)
-    key = f"{BUCKET}/{release}/derived/pattern_fingerprints.parquet"
-    table = pq.read_table(key, filesystem=filesystem)
+    key = f"{release}/derived/pattern_fingerprints.parquet"
+    if _cache_enabled():
+        table = pq.read_table(_resolve(key))
+    else:
+        import pyarrow.fs as pafs
+
+        filesystem = pafs.S3FileSystem(region=REGION, anonymous=True)
+        table = pq.read_table(f"{BUCKET}/{key}", filesystem=filesystem)
 
     ids = table.column("chembl_id").to_pylist()
     raw = table.column("fp").combine_chunks().buffers()[1]
@@ -113,7 +119,7 @@ def substructure_search(
 
     con = connect(release)
     try:
-        path = f"s3://{BUCKET}/{release}/derived/activities_enriched.parquet"
+        path = _resolve(f"{release}/derived/activities_enriched.parquet")
         placeholders = ",".join("?" for _ in examined_ids)
         rows = con.execute(
             f"""SELECT DISTINCT compound_chembl_id, canonical_smiles

@@ -17,7 +17,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ._constants import BUCKET
+from ._constants import BUCKET, REGION
+from .cache import is_cache_enabled as _cache_enabled
+from .cache import resolve as _resolve
 from .releases import _require, latest
 
 if TYPE_CHECKING:
@@ -54,16 +56,21 @@ def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
     if release in _corpus_cache:
         return _corpus_cache[release]
 
-    import pyarrow.fs as pafs
     import pyarrow.parquet as pq
 
-    # pyarrow's own S3 filesystem, not DuckDB: reading the packed-byte
-    # column straight off its Arrow buffer is what keeps this fast. Going
-    # through DuckDB's dataframe conversion instead turns 1.68M individual
-    # 256-byte python bytes objects and a few seconds becomes minutes.
-    filesystem = pafs.S3FileSystem(region="us-east-1", anonymous=True)
-    key = f"{BUCKET}/{release}/derived/fingerprints.parquet"
-    table = pq.read_table(key, filesystem=filesystem)
+    key = f"{release}/derived/fingerprints.parquet"
+    if _cache_enabled():
+        # A local path from here needs no filesystem argument.
+        table = pq.read_table(_resolve(key))
+    else:
+        import pyarrow.fs as pafs
+
+        # pyarrow's own S3 filesystem, not DuckDB: reading the packed-byte
+        # column straight off its Arrow buffer is what keeps this fast. Going
+        # through DuckDB's dataframe conversion instead turns 1.68M individual
+        # 256-byte python bytes objects and a few seconds becomes minutes.
+        filesystem = pafs.S3FileSystem(region=REGION, anonymous=True)
+        table = pq.read_table(f"{BUCKET}/{key}", filesystem=filesystem)
 
     ids = table.column("chembl_id").to_pylist()
     raw = table.column("fp").combine_chunks().buffers()[1]

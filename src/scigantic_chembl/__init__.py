@@ -3,6 +3,8 @@
 from importlib.metadata import PackageNotFoundError, version as _version
 
 from .activities import activities
+from .cache import cache_dir, disable_cache, enable_cache, is_cache_enabled
+from .cache import resolve as cache_resolve
 from .connection import connect, query
 from .releases import (
     ReleaseCapabilityError,
@@ -28,6 +30,11 @@ __all__ = [
     "substructure_search",
     "releases",
     "latest",
+    "enable_cache",
+    "disable_cache",
+    "is_cache_enabled",
+    "cache_dir",
+    "cache_resolve",
     "ReleaseInfo",
     "ReleaseCapabilityError",
     "UnknownReleaseError",

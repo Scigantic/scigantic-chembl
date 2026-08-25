@@ -34,7 +34,7 @@ $ pip install scigantic-chembl
 
 ## Compared to chembl-downloader
 
-[chembl-downloader](https://github.com/cthoyt/chembl-downloader) is the standard way to work with ChEMBL in Python. It covers every release back to chembl_1, and once the SQLite dump is downloaded it works fully offline. It can also do similarity and substructure search, through `chemfp` and an RDKit `SubstructLibrary` it builds locally. This package trades that release range for less setup: a pre-joined potency table, and similarity and substructure search over fingerprints the mirror already precomputes, so there's no local index to build before a query runs. The mirror here only carries chembl_35 through chembl_37, and only chembl_37 has the pre-joined and search layers, so an older release or fully offline work is still a job for chembl-downloader.
+[chembl-downloader](https://github.com/cthoyt/chembl-downloader) is the standard way to work with ChEMBL in Python. It covers every release back to chembl_1, and once the SQLite dump is downloaded it works fully offline. It can also do similarity and substructure search, through `chemfp` and an RDKit `SubstructLibrary` it builds locally. This package trades that release range for less setup: a pre-joined potency table, and similarity and substructure search over fingerprints the mirror already precomputes, so there's no local index to build before a query runs. `enable_cache()` closes some of the offline gap, see below, but the mirror here only carries chembl_35 through chembl_37, and an older release is still a job for chembl-downloader.
 
 ## Potency data, pre-joined
 
@@ -102,6 +102,21 @@ CHEMBL1788321   COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OC[C@H](O)CN1CCOCC1
 RDKit's exact `HasSubstructMatch` is too slow to run against 1.68M compounds per query, so this prescreens first with a precomputed `PatternFingerprint`: a molecule can only contain the query fragment if every bit the query sets is also set in the candidate, a cheap containment test over packed bytes. Only prescreen survivors get the expensive exact check, stopping as soon as `limit` confirmed matches are found.
 
 **How narrow the prescreen is depends on how specific the query fragment is, not on this package.** A small, generic ring system (a bare quinazoline, say) is a weak filter, over a million of the 1.68M compounds pass it, because PatternFingerprint discriminates on structural complexity, and small fragments have little of it. A large, specific fragment like the full example above prescreens to 34 candidates before the exact stage even starts. `max_candidates` (default 20,000) bounds how many prescreen survivors get exact-matched, so an overly generic query can't turn into an unbounded scan; hitting that cap before finding `limit` matches raises a warning and sets `result.attrs["truncated"] = True`, rather than silently returning a partial answer that looks complete.
+
+## Working offline
+
+Off by default, since zero setup is the whole point. Turn it on when you want to run the same queries repeatedly without re-fetching from S3, or work with no network at all after the first pull:
+
+```python
+import scigantic_chembl as chembl
+
+chembl.enable_cache()
+df = chembl.activities(target_chembl_id="CHEMBL203")  # downloads once, then reads from disk
+```
+
+`activities()`, `similar_compounds()` and `substructure_search()` each need exactly one derived file, so caching downloads that one file to `~/.cache/scigantic-chembl` (override with `enable_cache(cache_dir=...)` or the `SCIGANTIC_CHEMBL_CACHE` environment variable) and reuses it after that.
+
+`connect()` and `query()` don't participate in this. `connect()` registers ten core tables as views on every call, several over 1 GB, so caching them there would mean any call eagerly downloads everything regardless of what the query actually touches. Cache one table yourself if you want it locally: `chembl.cache_resolve("chembl_37/parquet/molecule_dictionary.parquet")` downloads it and returns the local path, usable directly in `read_parquet(...)`.
 
 ## What's mirrored
 

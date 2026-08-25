@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._constants import BUCKET
+from .cache import resolve as _resolve
 from .connection import connect
 from .releases import _require, latest
 
@@ -41,7 +41,7 @@ def activities(
     _require(release, "activities_enriched")
     con = connect(release)
     try:
-        path = f"s3://{BUCKET}/{release}/derived/activities_enriched.parquet"
+        path = _resolve(f"{release}/derived/activities_enriched.parquet")
         con.execute(
             "CREATE OR REPLACE VIEW activities_enriched AS "
             f"SELECT * FROM read_parquet('{path}')"
