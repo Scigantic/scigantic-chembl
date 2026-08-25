@@ -90,6 +90,8 @@ chembl.releases()
 
 chembl_36 and chembl_35 are raw-table access only: their `activities` table is missing a column chembl_37's has (`modality`), so calling `activities()` or `similar_compounds()` on either one raises `ReleaseCapabilityError` up front instead of failing partway through a join with a confusing error.
 
+This table isn't hardcoded. `releases()` reads a small manifest that the mirror's own weekly cron regenerates by probing the bucket directly, so a new ChEMBL release shows up here without waiting on a new version of this package. If the manifest can't be reached, calls fall back to the snapshot shipped with whatever version you have installed and print a warning, rather than failing outright.
+
 ## Command line
 
 ```console

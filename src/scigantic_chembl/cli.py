@@ -6,7 +6,6 @@ import argparse
 import sys
 from typing import Sequence
 
-from ._constants import DEFAULT_RELEASE
 from .connection import query as run_query
 from .releases import releases
 
@@ -46,7 +45,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "query", help="run SQL against a release and print tab-separated output"
     )
     query_parser.add_argument("sql")
-    query_parser.add_argument("--release", default=DEFAULT_RELEASE)
+    query_parser.add_argument("--release", default=None, help="defaults to the current release")
     query_parser.set_defaults(func=_cmd_query)
 
     args = parser.parse_args(argv)

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._constants import BUCKET, DEFAULT_RELEASE, REGION
-from .releases import _validate_release
+from ._constants import BUCKET, REGION
+from .releases import _validate_release, latest
 
 if TYPE_CHECKING:
     import duckdb
@@ -31,15 +31,19 @@ _CORE_TABLES = (
 )
 
 
-def connect(release: str = DEFAULT_RELEASE) -> "duckdb.DuckDBPyConnection":
+def connect(release: str | None = None) -> "duckdb.DuckDBPyConnection":
     """Open a DuckDB connection against s3://scigantic-chembl.
 
     `SELECT * FROM activities` works directly; any other table under
     `<release>/parquet/` is reachable with
     `read_parquet('s3://scigantic-chembl/<release>/parquet/<table>.parquet')`.
+
+    release defaults to whatever the live manifest currently calls latest(),
+    resolved at call time rather than import time.
     """
     import duckdb
 
+    release = release or latest()
     _validate_release(release)
 
     con = duckdb.connect()
@@ -62,7 +66,7 @@ def connect(release: str = DEFAULT_RELEASE) -> "duckdb.DuckDBPyConnection":
     return con
 
 
-def query(sql: str, release: str = DEFAULT_RELEASE) -> "pd.DataFrame":
+def query(sql: str, release: str | None = None) -> "pd.DataFrame":
     """Run SQL against a release and return a pandas DataFrame.
 
     Opens a new connection per call. For several queries against the same

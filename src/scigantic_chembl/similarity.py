@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ._constants import BUCKET, DEFAULT_RELEASE
-from .releases import _require
+from ._constants import BUCKET
+from .releases import _require, latest
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -75,15 +75,17 @@ def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
 
 def similar_compounds(
     smiles: str,
-    release: str = DEFAULT_RELEASE,
+    release: str | None = None,
     top_k: int = 20,
 ) -> "pd.DataFrame":
     """Rank the corpus by Tanimoto similarity to a query SMILES.
 
-    Only chembl_37 has a fingerprints.parquet. The first call in a process
-    pays for loading the corpus from S3 (a few seconds); later calls in the
-    same process reuse it.
+    release defaults to the manifest's current latest(). Only that release
+    is guaranteed to have a fingerprints.parquet. The first call in a
+    process pays for loading the corpus from S3 (a few seconds); later
+    calls in the same process reuse it.
     """
+    release = release or latest()
     _require(release, "fingerprints")
     query_fp = _fingerprint_packed(smiles)
     ids, corpus = _load_corpus(release)

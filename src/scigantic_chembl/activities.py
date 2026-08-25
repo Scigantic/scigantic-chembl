@@ -12,16 +12,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._constants import BUCKET, DEFAULT_RELEASE
+from ._constants import BUCKET
 from .connection import connect
-from .releases import _require
+from .releases import _require, latest
 
 if TYPE_CHECKING:
     import pandas as pd
 
 
 def activities(
-    release: str = DEFAULT_RELEASE,
+    release: str | None = None,
     target_chembl_id: str | None = None,
     min_confidence: int | None = None,
     limit: int | None = None,
@@ -33,10 +33,11 @@ def activities(
     not something to bake in silently. Pass min_confidence to apply the
     common confidence_score >= 8 convention yourself.
 
-    Only chembl_37 carries this file. Raises ReleaseCapabilityError on
-    chembl_36 and chembl_35, whose `activities` table is missing a column
-    this join needs.
+    release defaults to the manifest's current latest(). Only that release
+    is guaranteed to carry this file; call releases() to check which ones
+    do, and expect ReleaseCapabilityError on the ones that don't.
     """
+    release = release or latest()
     _require(release, "activities_enriched")
     con = connect(release)
     try:

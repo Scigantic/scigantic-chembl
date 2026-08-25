@@ -1,3 +1,6 @@
+import sys
+import warnings
+
 import pytest
 
 import scigantic_chembl as chembl
@@ -35,3 +38,26 @@ def test_activities_on_chembl_36_raises_capability_error():
 def test_unknown_release_raises():
     with pytest.raises(UnknownReleaseError):
         chembl.query("SELECT 1", release="chembl_99")
+
+
+def test_falls_back_when_manifest_unreachable():
+    releases_module = sys.modules["scigantic_chembl.releases"]
+    real_url, real_cache = releases_module._MANIFEST_URL, releases_module._cache
+    releases_module._MANIFEST_URL = (
+        "https://scigantic-chembl.s3.us-east-1.amazonaws.com/_DOES_NOT_EXIST.json"
+    )
+    releases_module._cache = None
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            assert chembl.latest() == "chembl_37"
+            assert {r.release for r in chembl.releases()} == {
+                "chembl_37",
+                "chembl_36",
+                "chembl_35",
+            }
+        assert len(caught) == 1
+        assert issubclass(caught[0].category, UserWarning)
+        assert "falling back" in str(caught[0].message)
+    finally:
+        releases_module._MANIFEST_URL, releases_module._cache = real_url, real_cache
