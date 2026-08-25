@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scigantic-chembl"
-version = "0.2.1"
-description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table and fingerprint similarity search."
+version = "0.3.0"
+description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table, similarity search, and substructure search."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT-0" }

@@ -20,6 +20,7 @@ def test_chembl_37_has_full_derived_layer():
     info = {r.release: r for r in chembl.releases()}["chembl_37"]
     assert info.activities_enriched
     assert info.fingerprints
+    assert info.pattern_fingerprints
     assert info.cyp_training
 
 
@@ -28,6 +29,7 @@ def test_chembl_36_is_raw_only():
     assert info.raw
     assert not info.activities_enriched
     assert not info.fingerprints
+    assert not info.pattern_fingerprints
 
 
 def test_activities_on_chembl_36_raises_capability_error():

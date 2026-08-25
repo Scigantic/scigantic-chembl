@@ -33,18 +33,21 @@ _FALLBACK_RELEASES = {
         "raw": True,
         "activities_enriched": True,
         "fingerprints": True,
+        "pattern_fingerprints": True,
         "cyp_training": True,
     },
     "chembl_36": {
         "raw": True,
         "activities_enriched": False,
         "fingerprints": False,
+        "pattern_fingerprints": False,
         "cyp_training": True,
     },
     "chembl_35": {
         "raw": True,
         "activities_enriched": False,
         "fingerprints": False,
+        "pattern_fingerprints": False,
         "cyp_training": True,
     },
 }
@@ -64,6 +67,7 @@ class ReleaseInfo:
     raw: bool
     activities_enriched: bool
     fingerprints: bool
+    pattern_fingerprints: bool
     cyp_training: bool
 
 

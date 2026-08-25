@@ -17,6 +17,7 @@ def _cmd_info(_args: argparse.Namespace) -> int:
             for name, present in (
                 ("activities", info.activities_enriched),
                 ("fingerprints", info.fingerprints),
+                ("pattern_fingerprints", info.pattern_fingerprints),
                 ("cyp_training", info.cyp_training),
             )
             if present
