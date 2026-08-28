@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .cache import _etag
 from .cache import resolve as _resolve
 from .connection import connect
 from .releases import _require, _resolve_release
@@ -37,13 +38,17 @@ def activities(
     is guaranteed to carry this file; call releases() to check which ones
     do, and expect ReleaseCapabilityError on the ones that don't. Omitting
     it raises a UserWarning naming the release that was resolved; the
-    returned frame carries it either way as `.attrs["chembl_release"]`.
+    returned frame carries it either way as `.attrs["chembl_release"]`,
+    plus the source parquet file's current S3 ETag as
+    `.attrs["chembl_etag"]` (None if that HEAD request fails) -- release
+    pins you to a folder, this pins you to the exact bytes read from it.
     """
     release = _resolve_release(release)
     _require(release, "activities_enriched")
     con = connect(release)
     try:
-        path = _resolve(f"{release}/derived/activities_enriched.parquet")
+        key = f"{release}/derived/activities_enriched.parquet"
+        path = _resolve(key)
         con.execute(
             "CREATE OR REPLACE VIEW activities_enriched AS "
             f"SELECT * FROM read_parquet('{path}')"
@@ -64,6 +69,7 @@ def activities(
             params.append(int(limit))
         df = con.execute(sql, params).df()
         df.attrs["chembl_release"] = release
+        df.attrs["chembl_etag"] = _etag(key)
         return df
     finally:
         con.close()

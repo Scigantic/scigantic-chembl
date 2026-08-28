@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from ._constants import BUCKET, REGION
+from .cache import _etag
 from .cache import is_cache_enabled as _cache_enabled
 from .cache import resolve as _resolve
 from .releases import _require, _resolve_release
@@ -92,7 +93,9 @@ def similar_compounds(
     process pays for loading the corpus from S3 (a few seconds); later
     calls in the same process reuse it. Omitting release raises a
     UserWarning naming the release that was resolved; the returned frame
-    carries it either way as `.attrs["chembl_release"]`.
+    carries it either way as `.attrs["chembl_release"]`, plus the source
+    parquet file's current S3 ETag as `.attrs["chembl_etag"]` (None if
+    that HEAD request fails).
     """
     release = _resolve_release(release)
     _require(release, "fingerprints")
@@ -118,4 +121,5 @@ def similar_compounds(
         }
     )
     result.attrs["chembl_release"] = release
+    result.attrs["chembl_etag"] = _etag(f"{release}/derived/fingerprints.parquet")
     return result
