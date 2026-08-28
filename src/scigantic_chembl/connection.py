@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ._constants import BUCKET, REGION
-from .releases import _validate_release, latest
+from .releases import _resolve_release, _validate_release
 
 if TYPE_CHECKING:
     import duckdb
@@ -46,11 +46,14 @@ def connect(release: str | None = None) -> "duckdb.DuckDBPyConnection":
     `read_parquet('s3://scigantic-chembl/<release>/parquet/<table>.parquet')`.
 
     release defaults to whatever the live manifest currently calls latest(),
-    resolved at call time rather than import time.
+    resolved at call time rather than import time; omitting it raises a
+    UserWarning naming the release that was resolved, since that resolution
+    isn't stable across processes and this connection carries no attribute
+    of its own to recover it from afterward.
     """
     import duckdb
 
-    release = release or latest()
+    release = _resolve_release(release)
     _validate_release(release)
 
     con = duckdb.connect()
@@ -85,8 +88,11 @@ def query(sql: str, release: str | None = None) -> "pd.DataFrame":
     Opens a new connection per call. For several queries against the same
     release, call connect() once and reuse it instead.
     """
+    release = _resolve_release(release)
     con = connect(release)
     try:
-        return con.execute(sql).df()
+        df = con.execute(sql).df()
+        df.attrs["chembl_release"] = release
+        return df
     finally:
         con.close()

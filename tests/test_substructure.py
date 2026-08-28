@@ -69,11 +69,35 @@ def test_confirmed_absent_fragment_returns_empty_not_truncated():
 
 
 def test_truncation_warns_and_flags_when_cap_too_low():
+    # release is pinned here so the only warning in play is the truncation
+    # one this test is actually checking, not the separate one that fires
+    # for an omitted release (see test_omitted_release_warns_and_is_recorded
+    # below).
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         hits = chembl.substructure_search(
-            GEFITINIB_SCAFFOLD, limit=50, max_candidates=1
+            GEFITINIB_SCAFFOLD, release="chembl_37", limit=50, max_candidates=1
         )
     assert hits.attrs["truncated"] is True
     assert len(caught) == 1
     assert "cap" in str(caught[0].message)
+
+
+def test_omitted_release_warns_and_is_recorded():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        hits = chembl.substructure_search(GEFITINIB_SCAFFOLD, limit=50, max_candidates=1000)
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, UserWarning)
+    assert "no release specified" in str(caught[0].message)
+    assert hits.attrs["chembl_release"] == "chembl_37"
+
+
+def test_explicit_release_does_not_warn():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        hits = chembl.substructure_search(
+            GEFITINIB_SCAFFOLD, release="chembl_37", limit=50, max_candidates=1000
+        )
+    assert len(caught) == 0
+    assert hits.attrs["chembl_release"] == "chembl_37"

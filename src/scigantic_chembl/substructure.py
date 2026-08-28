@@ -23,7 +23,7 @@ from ._constants import BUCKET, REGION
 from .cache import is_cache_enabled as _cache_enabled
 from .cache import resolve as _resolve
 from .connection import connect
-from .releases import _require, latest
+from .releases import _require, _resolve_release
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -89,11 +89,13 @@ def substructure_search(
     an incomplete answer that looks the same as a complete one.
 
     release defaults to the manifest's current latest(). Only that release
-    is guaranteed to have a pattern_fingerprints.parquet.
+    is guaranteed to have a pattern_fingerprints.parquet. Omitting release
+    raises a UserWarning naming the release that was resolved; the returned
+    frame carries it either way as `.attrs["chembl_release"]`.
     """
     from rdkit import Chem
 
-    release = release or latest()
+    release = _resolve_release(release)
     _require(release, "pattern_fingerprints")
 
     query_mol = Chem.MolFromSmarts(smarts)
@@ -112,6 +114,7 @@ def substructure_search(
         result = pd.DataFrame(columns=["chembl_id", "canonical_smiles"])
         result.attrs["truncated"] = False
         result.attrs["candidates_examined"] = 0
+        result.attrs["chembl_release"] = release
         return result
 
     pool_truncated = len(candidate_ids) > max_candidates
@@ -150,4 +153,5 @@ def substructure_search(
     result = pd.DataFrame(matches, columns=["chembl_id", "canonical_smiles"])
     result.attrs["truncated"] = truncated
     result.attrs["candidates_examined"] = len(rows)
+    result.attrs["chembl_release"] = release
     return result
