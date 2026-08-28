@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from ._constants import BUCKET, REGION
+from .cache import _etag
 from .cache import is_cache_enabled as _cache_enabled
 from .cache import resolve as _resolve
 from .connection import connect
@@ -91,12 +92,15 @@ def substructure_search(
     release defaults to the manifest's current latest(). Only that release
     is guaranteed to have a pattern_fingerprints.parquet. Omitting release
     raises a UserWarning naming the release that was resolved; the returned
-    frame carries it either way as `.attrs["chembl_release"]`.
+    frame carries it either way as `.attrs["chembl_release"]`, plus the
+    prescreen corpus file's current S3 ETag as `.attrs["chembl_etag"]`
+    (None if that HEAD request fails).
     """
     from rdkit import Chem
 
     release = _resolve_release(release)
     _require(release, "pattern_fingerprints")
+    pattern_key = f"{release}/derived/pattern_fingerprints.parquet"
 
     query_mol = Chem.MolFromSmarts(smarts)
     if query_mol is None:
@@ -115,6 +119,7 @@ def substructure_search(
         result.attrs["truncated"] = False
         result.attrs["candidates_examined"] = 0
         result.attrs["chembl_release"] = release
+        result.attrs["chembl_etag"] = _etag(pattern_key)
         return result
 
     pool_truncated = len(candidate_ids) > max_candidates
@@ -154,4 +159,5 @@ def substructure_search(
     result.attrs["truncated"] = truncated
     result.attrs["candidates_examined"] = len(rows)
     result.attrs["chembl_release"] = release
+    result.attrs["chembl_etag"] = _etag(pattern_key)
     return result

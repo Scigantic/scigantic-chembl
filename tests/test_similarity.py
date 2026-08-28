@@ -1,3 +1,4 @@
+import re
 import warnings
 
 import pytest
@@ -5,6 +6,8 @@ import pytest
 import scigantic_chembl as chembl
 
 rdkit = pytest.importorskip("rdkit")
+
+_ETAG_SHAPE = re.compile(r"^[0-9a-f]{32}(-\d+)?$")
 
 # PubChem CID 123631, canonical SMILES for gefitinib.
 GEFITINIB_SMILES = "COC1=C(C=C2C(=C1)N=CN=C2NC3=CC(=C(C=C3)F)Cl)OCCCN4CCOCC4"
@@ -34,6 +37,11 @@ def test_explicit_release_does_not_warn():
         hits = chembl.similar_compounds(GEFITINIB_SMILES, release="chembl_37", top_k=1)
     assert len(caught) == 0
     assert hits.attrs["chembl_release"] == "chembl_37"
+
+
+def test_etag_is_recorded_and_looks_like_an_etag():
+    hits = chembl.similar_compounds(GEFITINIB_SMILES, top_k=1)
+    assert _ETAG_SHAPE.match(hits.attrs["chembl_etag"])
 
 
 def test_similar_compounds_on_release_without_fingerprints_raises():

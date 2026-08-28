@@ -1,3 +1,4 @@
+import re
 import warnings
 
 import pytest
@@ -6,6 +7,8 @@ import scigantic_chembl as chembl
 
 rdkit = pytest.importorskip("rdkit")
 from rdkit import Chem  # noqa: E402
+
+_ETAG_SHAPE = re.compile(r"^[0-9a-f]{32}(-\d+)?$")
 
 # Gefitinib's full scaffold as a SMARTS query. Verified against the live
 # mirror: 9 real matches (close analogues and gefitinib itself, CHEMBL939),
@@ -101,3 +104,19 @@ def test_explicit_release_does_not_warn():
         )
     assert len(caught) == 0
     assert hits.attrs["chembl_release"] == "chembl_37"
+
+
+def test_etag_is_recorded_on_a_normal_result():
+    hits = chembl.substructure_search(GEFITINIB_SCAFFOLD, limit=50, max_candidates=1000)
+    assert _ETAG_SHAPE.match(hits.attrs["chembl_etag"])
+
+
+def test_etag_is_recorded_when_no_matches_confirmed():
+    # IMPOSSIBLE_FRAGMENT still prescreens to 681 candidates (see
+    # test_confirmed_absent_fragment_returns_empty_not_truncated below), so
+    # this exercises the normal return path with zero matches, not the
+    # separate no-candidates-at-all early return -- both set chembl_etag
+    # the same way, from the same pattern_key.
+    hits = chembl.substructure_search(IMPOSSIBLE_FRAGMENT, limit=10, max_candidates=1000)
+    assert len(hits) == 0
+    assert _ETAG_SHAPE.match(hits.attrs["chembl_etag"])

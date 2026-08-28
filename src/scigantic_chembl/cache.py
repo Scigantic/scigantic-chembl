@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -31,6 +32,7 @@ _enabled = False
 _cache_dir: Path | None = None
 
 _CHUNK_BYTES = 1024 * 1024
+_TIMEOUT_SECONDS = 5
 
 
 def _default_cache_dir() -> Path:
@@ -112,3 +114,22 @@ def resolve(key: str) -> str:
             fh.write(chunk)
     os.replace(tmp_path, local_path)
     return str(local_path)
+
+
+def _etag(key: str) -> str | None:
+    """The current S3 ETag for the object at this key, or None on failure.
+
+    A plain HEAD request regardless of cache state: resolve() above skips
+    the network entirely on a cache hit, so it's not a reliable place to
+    observe this, and the release string alone only pins a caller to a
+    folder, not to the exact bytes at that key -- this is what would catch
+    an object silently changing underneath an unchanged release.
+    """
+    url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"
+    try:
+        request = urllib.request.Request(url, method="HEAD")
+        with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
+            etag = response.headers.get("ETag")
+    except (urllib.error.URLError, TimeoutError):
+        return None
+    return etag.strip('"') if etag else None

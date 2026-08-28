@@ -1,6 +1,9 @@
+import re
 import warnings
 
 import scigantic_chembl as chembl
+
+_ETAG_SHAPE = re.compile(r"^[0-9a-f]{32}(-\d+)?$")
 
 
 def test_omitted_release_warns_and_is_recorded():
@@ -11,6 +14,15 @@ def test_omitted_release_warns_and_is_recorded():
     assert issubclass(caught[0].category, UserWarning)
     assert "no release specified" in str(caught[0].message)
     assert df.attrs["chembl_release"] == "chembl_37"
+
+
+def test_etag_is_recorded_and_looks_like_an_etag():
+    # Real value, not mocked -- an actual HEAD against the live mirror.
+    # Not asserting the literal value: that's exactly the thing this
+    # attribute exists to let a caller notice changing, so pinning it here
+    # would make the test fail the moment the fix does its job.
+    df = chembl.activities(target_chembl_id="CHEMBL203")
+    assert _ETAG_SHAPE.match(df.attrs["chembl_etag"])
 
 
 def test_explicit_release_does_not_warn():
