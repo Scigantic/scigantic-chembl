@@ -1,4 +1,24 @@
+import warnings
+
 import scigantic_chembl as chembl
+
+
+def test_omitted_release_warns_and_is_recorded():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        df = chembl.activities(target_chembl_id="CHEMBL203")
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, UserWarning)
+    assert "no release specified" in str(caught[0].message)
+    assert df.attrs["chembl_release"] == "chembl_37"
+
+
+def test_explicit_release_does_not_warn():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        df = chembl.activities(release="chembl_37", target_chembl_id="CHEMBL203")
+    assert len(caught) == 0
+    assert df.attrs["chembl_release"] == "chembl_37"
 
 
 def test_egfr_activities():

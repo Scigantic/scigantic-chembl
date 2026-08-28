@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from .cache import resolve as _resolve
 from .connection import connect
-from .releases import _require, latest
+from .releases import _require, _resolve_release
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -35,9 +35,11 @@ def activities(
 
     release defaults to the manifest's current latest(). Only that release
     is guaranteed to carry this file; call releases() to check which ones
-    do, and expect ReleaseCapabilityError on the ones that don't.
+    do, and expect ReleaseCapabilityError on the ones that don't. Omitting
+    it raises a UserWarning naming the release that was resolved; the
+    returned frame carries it either way as `.attrs["chembl_release"]`.
     """
-    release = release or latest()
+    release = _resolve_release(release)
     _require(release, "activities_enriched")
     con = connect(release)
     try:
@@ -60,6 +62,8 @@ def activities(
         if limit is not None:
             sql += " LIMIT ?"
             params.append(int(limit))
-        return con.execute(sql, params).df()
+        df = con.execute(sql, params).df()
+        df.attrs["chembl_release"] = release
+        return df
     finally:
         con.close()

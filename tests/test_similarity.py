@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 
 import scigantic_chembl as chembl
@@ -14,6 +16,24 @@ def test_similar_compounds_returns_query_itself_as_top_hit():
     assert len(hits) == 5
     assert hits["tanimoto"].iloc[0] == pytest.approx(1.0)
     assert hits["tanimoto"].is_monotonic_decreasing
+
+
+def test_omitted_release_warns_and_is_recorded():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        hits = chembl.similar_compounds(GEFITINIB_SMILES, top_k=1)
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, UserWarning)
+    assert "no release specified" in str(caught[0].message)
+    assert hits.attrs["chembl_release"] == "chembl_37"
+
+
+def test_explicit_release_does_not_warn():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        hits = chembl.similar_compounds(GEFITINIB_SMILES, release="chembl_37", top_k=1)
+    assert len(caught) == 0
+    assert hits.attrs["chembl_release"] == "chembl_37"
 
 
 def test_similar_compounds_on_release_without_fingerprints_raises():

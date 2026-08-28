@@ -20,7 +20,7 @@ import numpy as np
 from ._constants import BUCKET, REGION
 from .cache import is_cache_enabled as _cache_enabled
 from .cache import resolve as _resolve
-from .releases import _require, latest
+from .releases import _require, _resolve_release
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -90,9 +90,11 @@ def similar_compounds(
     release defaults to the manifest's current latest(). Only that release
     is guaranteed to have a fingerprints.parquet. The first call in a
     process pays for loading the corpus from S3 (a few seconds); later
-    calls in the same process reuse it.
+    calls in the same process reuse it. Omitting release raises a
+    UserWarning naming the release that was resolved; the returned frame
+    carries it either way as `.attrs["chembl_release"]`.
     """
-    release = release or latest()
+    release = _resolve_release(release)
     _require(release, "fingerprints")
     query_fp = _fingerprint_packed(smiles)
     ids, corpus = _load_corpus(release)
@@ -109,9 +111,11 @@ def similar_compounds(
     order = np.argsort(-tanimoto, kind="stable")[:top_k]
     import pandas as pd
 
-    return pd.DataFrame(
+    result = pd.DataFrame(
         {
             "chembl_id": [ids[i] for i in order],
             "tanimoto": tanimoto[order],
         }
     )
+    result.attrs["chembl_release"] = release
+    return result

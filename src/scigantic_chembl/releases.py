@@ -114,6 +114,27 @@ def _validate_release(release: str) -> None:
         raise UnknownReleaseError(f"{release!r} is not mirrored. Known releases: {known}.")
 
 
+def _resolve_release(release: str | None) -> str:
+    """Resolve an optional release argument, warning when it wasn't passed.
+
+    A release resolved this way isn't stable across processes: latest()
+    reads a live manifest that changes over time, cached only per process.
+    Two calls that both omit release, run days apart, can silently return
+    different data with no record of which release either one actually
+    used. Pass release explicitly for anything you'll want to trace back.
+    """
+    if release is not None:
+        return release
+    resolved = latest()
+    warnings.warn(
+        f"no release specified; resolved to {resolved!r}. Pass release= "
+        "explicitly for a reproducible result.",
+        UserWarning,
+        stacklevel=3,
+    )
+    return resolved
+
+
 def _require(release: str, capability: str) -> None:
     _validate_release(release)
     data = _manifest()
