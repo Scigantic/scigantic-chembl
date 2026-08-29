@@ -30,8 +30,14 @@ _FP_BITS = 2048
 _FP_BYTES = _FP_BITS // 8
 
 # One corpus load per (release, process): reused across calls in the same
-# session rather than re-fetched from S3 every time.
-_corpus_cache: dict[str, tuple[list[str], "np.ndarray"]] = {}
+# session rather than re-fetched from S3 every time. The ETag is captured
+# in the same cache entry, at load time, rather than re-fetched with a
+# HEAD request on every call: measured, that HEAD request alone cost
+# about 0.2s per call, real overhead on an otherwise-warm, cached lookup.
+# It's also more correct this way, not just faster: an ETag fetched here
+# describes the bytes actually read into this cache entry, rather than
+# whatever a separate, later HEAD request happens to return.
+_corpus_cache: dict[str, tuple[list[str], "np.ndarray", "str | None"]] = {}
 
 
 def _fingerprint_packed(smiles: str) -> "np.ndarray":
@@ -53,7 +59,7 @@ def _fingerprint_packed(smiles: str) -> "np.ndarray":
     return np.packbits(bits)
 
 
-def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
+def _load_corpus(release: str) -> tuple[list[str], "np.ndarray", "str | None"]:
     if release in _corpus_cache:
         return _corpus_cache[release]
 
@@ -76,9 +82,10 @@ def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
     ids = table.column("chembl_id").to_pylist()
     raw = table.column("fp").combine_chunks().buffers()[1]
     packed = np.frombuffer(raw, dtype=np.uint8).reshape(len(ids), _FP_BYTES)
+    etag = _etag(key)
 
-    _corpus_cache[release] = (ids, packed)
-    return ids, packed
+    _corpus_cache[release] = (ids, packed, etag)
+    return ids, packed, etag
 
 
 def similar_compounds(
@@ -90,17 +97,18 @@ def similar_compounds(
 
     release defaults to the manifest's current latest(). Only that release
     is guaranteed to have a fingerprints.parquet. The first call in a
-    process pays for loading the corpus from S3 (a few seconds); later
-    calls in the same process reuse it. Omitting release raises a
-    UserWarning naming the release that was resolved; the returned frame
-    carries it either way as `.attrs["chembl_release"]`, plus the source
-    parquet file's current S3 ETag as `.attrs["chembl_etag"]` (None if
-    that HEAD request fails).
+    process pays for loading the corpus from S3 (a few seconds), including
+    that file's current ETag; later calls, in the same process, reuse
+    both. Omitting release raises a UserWarning naming the release that
+    was resolved; the returned frame carries it either way as
+    `.attrs["chembl_release"]`, plus that captured ETag as
+    `.attrs["chembl_etag"]` (None if the HEAD request failed when the
+    corpus was first loaded).
     """
     release = _resolve_release(release)
     _require(release, "fingerprints")
     query_fp = _fingerprint_packed(smiles)
-    ids, corpus = _load_corpus(release)
+    ids, corpus, etag = _load_corpus(release)
 
     intersection = np.bitwise_count(corpus & query_fp).sum(axis=1, dtype=np.int32)
     union = np.bitwise_count(corpus | query_fp).sum(axis=1, dtype=np.int32)
@@ -121,5 +129,5 @@ def similar_compounds(
         }
     )
     result.attrs["chembl_release"] = release
-    result.attrs["chembl_etag"] = _etag(f"{release}/derived/fingerprints.parquet")
+    result.attrs["chembl_etag"] = etag
     return result
