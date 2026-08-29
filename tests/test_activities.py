@@ -17,7 +17,7 @@ def test_omitted_release_warns_and_is_recorded():
 
 
 def test_etag_is_recorded_and_looks_like_an_etag():
-    # Real value, not mocked -- an actual HEAD against the live mirror.
+    # Real value, not mocked: an actual HEAD against the live mirror.
     # Not asserting the literal value: that's exactly the thing this
     # attribute exists to let a caller notice changing, so pinning it here
     # would make the test fail the moment the fix does its job.

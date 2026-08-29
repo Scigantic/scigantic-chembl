@@ -122,7 +122,7 @@ def _etag(key: str) -> str | None:
     A plain HEAD request regardless of cache state: resolve() above skips
     the network entirely on a cache hit, so it's not a reliable place to
     observe this, and the release string alone only pins a caller to a
-    folder, not to the exact bytes at that key -- this is what would catch
+    folder, not to the exact bytes at that key. This is what would catch
     an object silently changing underneath an unchanged release.
     """
     url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"

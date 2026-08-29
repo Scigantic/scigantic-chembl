@@ -30,7 +30,7 @@ def activities(
     """Potency measurements, already joined and filtered.
 
     confidence_score and target_type ride along as columns rather than
-    filters -- which rows count as usable SAR data is an analysis choice,
+    filters: which rows count as usable SAR data is an analysis choice,
     not something to bake in silently. Pass min_confidence to apply the
     common confidence_score >= 8 convention yourself.
 
@@ -40,8 +40,8 @@ def activities(
     it raises a UserWarning naming the release that was resolved; the
     returned frame carries it either way as `.attrs["chembl_release"]`,
     plus the source parquet file's current S3 ETag as
-    `.attrs["chembl_etag"]` (None if that HEAD request fails) -- release
-    pins you to a folder, this pins you to the exact bytes read from it.
+    `.attrs["chembl_etag"]` (None if that HEAD request fails). release
+    pins you to a folder; this pins you to the exact bytes read from it.
     """
     release = _resolve_release(release)
     _require(release, "activities_enriched")
