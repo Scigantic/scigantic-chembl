@@ -35,7 +35,11 @@ _FP_BYTES = _FP_BITS // 8
 _DEFAULT_MAX_CANDIDATES = 20_000
 
 # One corpus load per (release, process), same pattern as similarity.py.
-_corpus_cache: dict[str, tuple[list[str], "np.ndarray"]] = {}
+# The ETag is captured in the same cache entry, at load time, rather than
+# re-fetched with a HEAD request on every call: see similarity.py's
+# _corpus_cache comment for why (measured cost, and correctness: it
+# describes the bytes actually read into this cache entry).
+_corpus_cache: dict[str, tuple[list[str], "np.ndarray", "str | None"]] = {}
 
 
 def _pattern_fingerprint_packed(mol: "Mol") -> "np.ndarray":
@@ -46,7 +50,7 @@ def _pattern_fingerprint_packed(mol: "Mol") -> "np.ndarray":
     return np.packbits(bits)
 
 
-def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
+def _load_corpus(release: str) -> tuple[list[str], "np.ndarray", "str | None"]:
     if release in _corpus_cache:
         return _corpus_cache[release]
 
@@ -64,9 +68,10 @@ def _load_corpus(release: str) -> tuple[list[str], "np.ndarray"]:
     ids = table.column("chembl_id").to_pylist()
     raw = table.column("fp").combine_chunks().buffers()[1]
     packed = np.frombuffer(raw, dtype=np.uint8).reshape(len(ids), _FP_BYTES)
+    etag = _etag(key)
 
-    _corpus_cache[release] = (ids, packed)
-    return ids, packed
+    _corpus_cache[release] = (ids, packed, etag)
+    return ids, packed, etag
 
 
 def substructure_search(
@@ -92,22 +97,22 @@ def substructure_search(
     release defaults to the manifest's current latest(). Only that release
     is guaranteed to have a pattern_fingerprints.parquet. Omitting release
     raises a UserWarning naming the release that was resolved; the returned
-    frame carries it either way as `.attrs["chembl_release"]`, plus the
-    prescreen corpus file's current S3 ETag as `.attrs["chembl_etag"]`
-    (None if that HEAD request fails).
+    frame carries it either way as `.attrs["chembl_release"]`, plus that
+    prescreen corpus file's ETag as `.attrs["chembl_etag"]`, captured once
+    when the corpus was first loaded in this process (None if the HEAD
+    request failed then).
     """
     from rdkit import Chem
 
     release = _resolve_release(release)
     _require(release, "pattern_fingerprints")
-    pattern_key = f"{release}/derived/pattern_fingerprints.parquet"
 
     query_mol = Chem.MolFromSmarts(smarts)
     if query_mol is None:
         raise ValueError(f"rdkit could not parse this SMARTS pattern: {smarts!r}")
     query_fp = _pattern_fingerprint_packed(query_mol)
 
-    ids, corpus = _load_corpus(release)
+    ids, corpus, etag = _load_corpus(release)
     # Containment: no bit set in the query is absent from the candidate.
     violations = np.bitwise_count(np.bitwise_and(query_fp, np.bitwise_not(corpus))).sum(axis=1)
     candidate_ids = [ids[i] for i in np.nonzero(violations == 0)[0]]
@@ -119,7 +124,7 @@ def substructure_search(
         result.attrs["truncated"] = False
         result.attrs["candidates_examined"] = 0
         result.attrs["chembl_release"] = release
-        result.attrs["chembl_etag"] = _etag(pattern_key)
+        result.attrs["chembl_etag"] = etag
         return result
 
     pool_truncated = len(candidate_ids) > max_candidates
@@ -159,5 +164,5 @@ def substructure_search(
     result.attrs["truncated"] = truncated
     result.attrs["candidates_examined"] = len(rows)
     result.attrs["chembl_release"] = release
-    result.attrs["chembl_etag"] = _etag(pattern_key)
+    result.attrs["chembl_etag"] = etag
     return result
