@@ -115,7 +115,7 @@ def test_etag_is_recorded_when_no_matches_confirmed():
     # IMPOSSIBLE_FRAGMENT still prescreens to 681 candidates (see
     # test_confirmed_absent_fragment_returns_empty_not_truncated below), so
     # this exercises the normal return path with zero matches, not the
-    # separate no-candidates-at-all early return -- both set chembl_etag
+    # separate no-candidates-at-all early return. Both set chembl_etag
     # the same way, from the same pattern_key.
     hits = chembl.substructure_search(IMPOSSIBLE_FRAGMENT, limit=10, max_candidates=1000)
     assert len(hits) == 0

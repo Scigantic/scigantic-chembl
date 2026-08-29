@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 # Registered as views on connect() so plain SQL can reference a table by
 # name instead of a full read_parquet() path. Every table under
 # <release>/parquet/ is still reachable that way even if it's not listed
-# here -- this is just the set worth naming up front.
+# here; this is just the set worth naming up front.
 _CORE_TABLES = (
     "activities",
     "assays",

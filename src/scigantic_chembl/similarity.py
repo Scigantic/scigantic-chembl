@@ -4,7 +4,7 @@ Every compound carrying a comparable potency measurement (1.68M of ChEMBL's
 2.9M structures) has a precomputed 2048-bit Morgan fingerprint (radius 2),
 packed to 256 bytes. Fingerprints are kept packed in memory and compared
 with numpy's bitwise_count, so a search never unpacks to a 2048-column
-array -- that difference is what keeps this to a fraction of a second
+array. That difference is what keeps this to a fraction of a second
 against a corpus that would otherwise be several gigabytes unpacked.
 
 Requires rdkit to encode the query molecule: `pip install
