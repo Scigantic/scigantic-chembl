@@ -143,4 +143,8 @@ $ scigantic-chembl query "SELECT count(*) FROM activities" --release chembl_37
 
 ## License
 
-MIT-0. See [LICENSE](LICENSE).
+MIT-0. See [LICENSE](LICENSE). This covers the code in this package only.
+
+## Data license
+
+ChEMBL's underlying data is licensed [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) by EMBL-EBI, separately from this package's own MIT-0 code license and not superseded by it. If you redistribute ChEMBL data (including derived tables you build from queries against this mirror), CC BY-SA 3.0 requires attribution to ChEMBL and requires that the redistributed data itself stay under a compatible share-alike license. See the [ChEMBL data license page](https://chembl.gitbook.io/chembl-interface-documentation/about#data-licensing) for details.

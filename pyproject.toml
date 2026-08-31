@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scigantic-chembl"
-version = "0.4.4"
+version = "0.4.5"
 description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table, similarity search, and substructure search."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,17 +25,17 @@ classifiers = [
 ]
 
 dependencies = [
-  "duckdb>=0.10",
-  "pyarrow>=14",
-  "numpy>=2.0",
-  "pandas>=1.5",
+  "duckdb>=0.10,<2",
+  "pyarrow>=14,<26",
+  "numpy>=2.0,<3",
+  "pandas>=1.5,<4",
 ]
 
 [project.optional-dependencies]
 # rdkit is only needed to encode the query molecule in similar_compounds();
 # everything else works without it.
 similarity = ["rdkit>=2023.9"]
-dev = ["pytest>=7", "mypy>=1.10", "pandas-stubs"]
+dev = ["pytest>=7", "pytest-cov>=5", "mypy>=1.10", "pandas-stubs"]
 
 [project.urls]
 Homepage = "https://scigantic.com"
@@ -53,6 +53,13 @@ scigantic_chembl = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["scigantic_chembl"]
+# Not wired into CI as a gate: this suite runs real queries against the live
+# S3 mirror, so a coverage threshold would be one more thing that can fail
+# for reasons unrelated to a change. `pytest --cov` is available locally for
+# anyone who wants the number.
 
 [tool.mypy]
 # No python_version pin: numpy's own .pyi stubs use syntax (PEP 695 `type`

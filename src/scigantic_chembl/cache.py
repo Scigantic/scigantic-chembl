@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 from ._constants import BUCKET, REGION
@@ -33,6 +35,22 @@ _cache_dir: Path | None = None
 
 _CHUNK_BYTES = 1024 * 1024
 _TIMEOUT_SECONDS = 5
+
+# One lock per key, created on first use. Guards resolve()'s
+# check-then-download against concurrent callers asking for the same key
+# at once: without this, N threads racing the first resolve() of a key
+# each see it missing and each download it in full, rather than one
+# downloading while the rest wait and reuse the result.
+_resolve_locks: dict[str, threading.Lock] = {}
+_resolve_locks_guard = threading.Lock()
+
+
+def _lock_for(key: str) -> threading.Lock:
+    lock = _resolve_locks.get(key)
+    if lock is not None:
+        return lock
+    with _resolve_locks_guard:
+        return _resolve_locks.setdefault(key, threading.Lock())
 
 
 def _default_cache_dir() -> Path:
@@ -85,13 +103,38 @@ def cache_dir() -> Path | None:
     return _cache_dir
 
 
+def _atomic_download(url: str, local_path: Path) -> None:
+    """Stream `url` to a sibling temp file, then rename it into place.
+
+    The rename is atomic, so a download killed partway through never leaves
+    something at `local_path` that looks cached but isn't: readers only
+    ever see the old state (temp file, ignored) or the new one (fully
+    written, renamed), never a partial write. Same reasoning as the
+    mirror's own _SCIGANTIC_MIRROR_COMPLETE marker: presence has to mean
+    "this is really, fully here."
+
+    The temp filename is unique per call, not just per `local_path`: two
+    threads racing to fill the same key must not share a temp path, or the
+    second os.replace() below raises FileNotFoundError once the first has
+    already consumed it. Last writer's os.replace() wins, which is fine
+    since every writer here is downloading the same immutable S3 key.
+    """
+    tmp_path = local_path.with_name(local_path.name + f".{uuid.uuid4().hex}.part")
+    with urllib.request.urlopen(url) as response, open(tmp_path, "wb") as fh:
+        while chunk := response.read(_CHUNK_BYTES):
+            fh.write(chunk)
+    os.replace(tmp_path, local_path)
+
+
 def resolve(key: str) -> str:
     """An S3 URL, or a local cached file path if caching is on.
 
     `key` is a path relative to the bucket root, e.g.
     "chembl_37/parquet/activities.parquet". Downloads to the cache on
     first access; later calls for the same key reuse the local file
-    without touching the network.
+    without touching the network. Concurrent callers asking for the same
+    key while it's still downloading wait for that download rather than
+    each starting their own.
     """
     if not _enabled:
         return f"s3://{BUCKET}/{key}"
@@ -101,18 +144,13 @@ def resolve(key: str) -> str:
     if local_path.exists():
         return str(local_path)
 
-    local_path.parent.mkdir(parents=True, exist_ok=True)
-    url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"
-    # Download to a sibling temp file and rename into place atomically, so a
-    # download killed partway through never leaves a file that looks cached
-    # but isn't. Same reasoning as the mirror's own _SCIGANTIC_MIRROR_COMPLETE
-    # marker: presence has to mean "this is really, fully here."
-    tmp_path = local_path.with_name(local_path.name + ".part")
-    print(f"scigantic-chembl: caching {key} ...", file=sys.stderr, flush=True)
-    with urllib.request.urlopen(url) as response, open(tmp_path, "wb") as fh:
-        while chunk := response.read(_CHUNK_BYTES):
-            fh.write(chunk)
-    os.replace(tmp_path, local_path)
+    with _lock_for(key):
+        if local_path.exists():  # another thread finished it while we waited
+            return str(local_path)
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        url = f"https://{BUCKET}.s3.{REGION}.amazonaws.com/{key}"
+        print(f"scigantic-chembl: caching {key} ...", file=sys.stderr, flush=True)
+        _atomic_download(url, local_path)
     return str(local_path)
 
 
