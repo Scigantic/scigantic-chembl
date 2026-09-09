@@ -13,6 +13,7 @@ from .releases import (
     latest,
     releases,
 )
+from .patents import patents, surechembl_ids
 from .similarity import similar_compounds
 from .substructure import substructure_search
 
@@ -28,6 +29,8 @@ __all__ = [
     "query",
     "similar_compounds",
     "substructure_search",
+    "patents",
+    "surechembl_ids",
     "releases",
     "latest",
     "enable_cache",

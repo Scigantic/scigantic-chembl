@@ -103,6 +103,19 @@ RDKit's exact `HasSubstructMatch` is too slow to run against 1.68M compounds per
 
 **How narrow the prescreen is depends on how specific the query fragment is, not on this package.** A small, generic ring system (a bare quinazoline, say) is a weak filter, over a million of the 1.68M compounds pass it, because PatternFingerprint discriminates on structural complexity, and small fragments have little of it. A large, specific fragment like the full example above prescreens to 34 candidates before the exact stage even starts. `max_candidates` (default 20,000) bounds how many prescreen survivors get exact-matched, so an overly generic query can't turn into an unbounded scan; hitting that cap before finding `limit` matches raises a warning and sets `result.attrs["truncated"] = True`, rather than silently returning a partial answer that looks complete.
 
+## Patents, via scigantic-surechembl
+
+```python
+chembl.surechembl_ids("CHEMBL25")           # [1353, 29350479], SureChEMBL's ids for this structure
+chembl.patents("CHEMBL25", max_results=50)  # [PatentHit(doc_id='CN-105308118-B', title=..., publication_date=..., assignee=...), ...]
+```
+
+The patents a compound appears in come from [SureChEMBL](https://www.surechembl.org/) (EMBL-EBI, 31M compounds extracted from 45M patents) through [scigantic-surechembl](https://github.com/Scigantic/scigantic-surechembl), which maps the ChEMBL id to SureChEMBL's ids via UniChem and takes the union of their patent lists. That package also has the patent text, the chemistry extracted from each document, Solr and structure search, and the join back into this mirror (`chembl_matches_for_patent`, every compound in a patent with its ChEMBL record and activity count). Needs the `patents` extra:
+
+```console
+$ pip install "scigantic-chembl[patents]"
+```
+
 ## Working offline
 
 Off by default, since zero setup is the whole point. Turn it on when you want to run the same queries repeatedly without re-fetching from S3, or work with no network at all after the first pull:

@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Versions correspond to PyPI releases.
 
+## 0.5.0 - 2026-09-08
+
+- `patents(chembl_id, max_results)` and `surechembl_ids(chembl_id)`: the
+  patents a ChEMBL compound was found in, through scigantic-surechembl
+  (new `patents` extra). The pointer from a compound into patent
+  chemistry; the reverse join (`chembl_matches_for_patent`, patent text,
+  structure search) lives in that package.
+
 ## 0.4.5 - 2026-08-31
 
 - Fixed a concurrency race in the local cache (`enable_cache()`): concurrent callers resolving the same key could each trigger a duplicate download, and two callers finishing a download at the same time could collide on a shared temp filename and raise `FileNotFoundError` on `os.replace()`. Fixed with a per-key lock and a unique temp filename per download attempt. Ported from the same fix already shipped in scigantic-bindingdb, which forked from this package before that fix existed here.

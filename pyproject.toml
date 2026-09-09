@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scigantic-chembl"
-version = "0.4.5"
+version = "0.5.0"
 description = "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table, similarity search, and substructure search."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,8 @@ dependencies = [
 # rdkit is only needed to encode the query molecule in similar_compounds();
 # everything else works without it.
 similarity = ["rdkit>=2023.9"]
+# patents() / surechembl_ids(): the pointer into SureChEMBL patent chemistry.
+patents = ["scigantic-surechembl>=0.2,<1"]
 dev = ["pytest>=7", "pytest-cov>=5", "mypy>=1.10", "pandas-stubs"]
 
 [project.urls]

@@ -21,7 +21,7 @@ jobs:
       - name: Install + test
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,similarity]"
+          pip install -e ".[dev,similarity,patents]"
           pytest -q
 
   typecheck:
@@ -33,5 +33,5 @@ jobs:
           python-version: '3.13'
       - run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,similarity]"
+          pip install -e ".[dev,similarity,patents]"
           mypy src/scigantic_chembl
