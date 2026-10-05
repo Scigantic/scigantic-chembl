@@ -62,7 +62,15 @@ def connect(release: str | None = None) -> "duckdb.DuckDBPyConnection":
     # terminal. Fine for the ops scripts in the main scigantic repo that
     # already set this; surprising output for a library call in a notebook
     # or script, so it's off here by default.
-    con.execute("SET enable_progress_bar=false")
+    # Inside a Jupyter kernel without ipywidgets, DuckDB (1.5.5) raises
+    # InvalidInputException on ANY change to enable_progress_bar, even turning
+    # it off ("required package 'ipywidgets' is missing"). Plain Python never
+    # hits it; a notebook on an image without ipywidgets fails on the first
+    # call. The setting is cosmetic; skip it rather than fail the connection.
+    try:
+        con.execute("SET enable_progress_bar=false")
+    except duckdb.Error:
+        pass
     con.execute("INSTALL httpfs")
     con.execute("LOAD httpfs")
     con.execute(f"SET s3_region='{REGION}'")

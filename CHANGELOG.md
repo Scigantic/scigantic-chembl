@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. Versions correspond to PyPI releases.
 
+## 0.5.1 - 2026-10-05
+
+- Fix: inside a Jupyter kernel without ipywidgets (the minimal and database
+  notebook images), DuckDB rejects `SET enable_progress_bar=false` and every
+  mirror call failed with InvalidInputException. The setting is now best-effort.
+  Found via scigantic-who 0.1.0 on 2026-10-04; same line here.
+
 ## 0.5.0 - 2026-09-08
 
 - `patents(chembl_id, max_results)` and `surechembl_ids(chembl_id)`: the
