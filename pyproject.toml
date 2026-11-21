@@ -22,6 +22,9 @@ classifiers = [
   "Typing :: Typed",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Scientific/Engineering :: Chemistry",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Topic :: Database",
 ]
 
 dependencies = [
@@ -43,6 +46,7 @@ dev = ["pytest>=7", "pytest-cov>=5", "mypy>=1.10", "pandas-stubs"]
 Homepage = "https://scigantic.com"
 Repository = "https://github.com/Scigantic/scigantic-chembl"
 Issues = "https://github.com/Scigantic/scigantic-chembl/issues"
+Documentation = "https://github.com/Scigantic/scigantic-chembl#readme"
 
 [project.scripts]
 scigantic-chembl = "scigantic_chembl.cli:main"
