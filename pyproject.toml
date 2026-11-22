@@ -44,6 +44,7 @@ dev = ["pytest>=7", "pytest-cov>=5", "mypy>=1.10", "pandas-stubs"]
 
 [project.urls]
 Homepage = "https://scigantic.com"
+"ChEMBL in a hosted notebook" = "https://scigantic.com/archive/97a98fc5-e6f9-555c-a22f-f2b548775f14?utm_source=pypi&utm_medium=project-urls&utm_campaign=scigantic-chembl"
 Repository = "https://github.com/Scigantic/scigantic-chembl"
 Issues = "https://github.com/Scigantic/scigantic-chembl/issues"
 Documentation = "https://github.com/Scigantic/scigantic-chembl#readme"
