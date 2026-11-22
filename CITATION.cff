@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: scigantic-chembl
+abstract: "Query ChEMBL directly from a public S3 mirror with DuckDB, including a pre-joined potency table, similarity search, and substructure search."
+authors:
+  - name: Scigantic
+    website: https://scigantic.com
+repository-code: https://github.com/Scigantic/scigantic-chembl
+url: https://pypi.org/project/scigantic-chembl/
+license: MIT-0
+keywords:
+  - "chembl"
+  - "cheminformatics"
+  - "duckdb"
+  - "drug-discovery"
+  - "bioactivity"
+version: "0.5.1"
+date-released: '2026-10-05'
