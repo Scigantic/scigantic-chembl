@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. Versions correspond to PyPI releases.
 
+## 0.5.2 - 2026-11-22
+
+- README opens with what the package reads, adds a runnable example near the top and links the matching dataset pages. Project URLs and classifiers updated. No code changes.
+
 ## 0.5.1 - 2026-10-05
 
 - Fix: inside a Jupyter kernel without ipywidgets (the minimal and database
