@@ -11,7 +11,7 @@
         <img alt="License" src="https://img.shields.io/github/license/Scigantic/scigantic-chembl" /></a>
 </p>
 
-Query ChEMBL directly from a public S3 mirror with DuckDB.
+Query [ChEMBL](https://www.ebi.ac.uk/chembl/), EMBL-EBI's database of bioactive molecules and their measured activity against targets (IC50, Ki, EC50), with SQL from Python. The tables are read from a public S3 mirror with DuckDB, so there is no SQLite dump to download and no local database to keep. A pre-joined potency table, similarity search and substructure search are included.
 
 ```python
 import scigantic_chembl as chembl
@@ -22,6 +22,8 @@ df = chembl.query("""
     WHERE pref_name IS NOT NULL
     LIMIT 5
 """)
+
+egfr = chembl.activities(target_chembl_id="CHEMBL203")   # EGFR: 18,998 measurements on 11,202 compounds
 ```
 
 That query runs against `s3://scigantic-chembl` over DuckDB's httpfs extension. Nothing is downloaded first, and there's no local database file sitting on disk afterward.
@@ -31,6 +33,10 @@ That query runs against `s3://scigantic-chembl` over DuckDB's httpfs extension. 
 ```console
 $ pip install scigantic-chembl
 ```
+
+## Try it on hosted data
+
+The Scigantic catalog entry for [ChEMBL 37](https://scigantic.com/archive/97a98fc5-e6f9-555c-a22f-f2b548775f14?utm_source=github&utm_medium=readme&utm_campaign=scigantic-chembl) opens a Jupyter notebook in the browser with the full release mounted read-only, including the SQLite database as EBI ships it. The sample notebook [Every measured drug-target pair](https://scigantic.com/sample/chem-chembl-bioactivity?utm_source=github&utm_medium=readme&utm_campaign=scigantic-chembl) pulls a potency table for a target out of ChEMBL's 24.5 million measurements and runs with nothing to download. More open data for this kind of work is listed under [drug discovery datasets](https://scigantic.com/topics/drug-discovery?utm_source=github&utm_medium=readme&utm_campaign=scigantic-chembl).
 
 ## Compared to chembl-downloader
 
